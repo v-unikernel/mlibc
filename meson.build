@@ -1,4 +1,4 @@
-project('mlibc', default_options: ['warning_level=2', 'cpp_std=c++20'])
+project('mlibc', default_options: ['warning_level=2', 'c_std=c11', 'cpp_std=c++20'])
 
 fs = import('fs')
 
@@ -41,6 +41,8 @@ disable_bsd_option = get_option('disable_bsd_option')
 disable_libgcc_dependency = get_option('disable_libgcc_dependency')
 internal_conf = configuration_data()
 mlibc_conf = configuration_data()
+
+static_pic_enabled = true
 
 if not headers_only
 	add_languages('c', 'cpp')
@@ -250,6 +252,12 @@ elif host_machine.system() == 'vinix'
 	rtld_include_dirs += include_directories('sysdeps/vinix/include')
 	libc_include_dirs += include_directories('sysdeps/vinix/include')
 	subdir('sysdeps/vinix')
+elif host_machine.system() == 'v-unikernel'
+	disable_linux_option = true
+	static_pic_enabled = false
+	rtld_include_dirs += include_directories('sysdeps/v-unikernel/include')
+	libc_include_dirs += include_directories('sysdeps/v-unikernel/include')
+	subdir('sysdeps/v-unikernel')
 elif host_machine.system() == 'lyre'
 	disable_linux_option = true
 	rtld_include_dirs += include_directories('sysdeps/lyre/include')
@@ -496,6 +504,7 @@ if not headers_only
 			cpp_args: ld_cpp_args + static_cpp_args,
 			include_directories: rtld_include_dirs,
 			dependencies: rtld_deps + rtlib_deps,
+			pic: static_pic_enabled,
 			install: false
 		)
 		libc_static = static_library('c', libc_all_sources,
@@ -504,6 +513,7 @@ if not headers_only
 			dependencies: libc_deps + rtlib_deps,
 			link_with: [ld_static_lib],
 			link_whole: [libc_sublibs, ld_static_lib],
+			pic: static_pic_enabled,
 			install: true
 		)
 	endif
